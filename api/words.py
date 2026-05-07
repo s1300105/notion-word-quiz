@@ -38,6 +38,7 @@ def fetch_words():
             break
         cursor = data.get("next_cursor")
 
+    debug_props = list(results[0]["properties"].keys()) if results else []
     words = []
     for page in results:
         props = page.get("properties", {})
@@ -52,7 +53,7 @@ def fetch_words():
                 "translation": translation,
                 "memo": memo,
             })
-    return words
+    return words, debug_props
 
 
 class handler(BaseHTTPRequestHandler):
@@ -64,8 +65,11 @@ class handler(BaseHTTPRequestHandler):
             })
             return
         try:
-            words = fetch_words()
-            self._send(200, {"success": True, "words": words, "count": len(words)})
+            words, debug_props = fetch_words()
+            response = {"success": True, "words": words, "count": len(words)}
+            if len(words) == 0 and debug_props:
+                response["debug_properties"] = debug_props
+            self._send(200, response)
         except requests.HTTPError as e:
             code = e.response.status_code if e.response else "?"
             body = e.response.text[:200] if e.response else str(e)
