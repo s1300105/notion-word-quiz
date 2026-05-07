@@ -42,7 +42,7 @@ def fetch_words():
     words = []
     for page in results:
         props = page.get("properties", {})
-        word = get_plain_text(props.get("単語"))
+        word = get_plain_text(props.get("英語"))
         pronunciation = get_plain_text(props.get("発音"))
         translation = get_plain_text(props.get("和訳"))
         memo = get_plain_text(props.get("メモ"))
