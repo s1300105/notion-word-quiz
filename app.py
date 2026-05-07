@@ -17,7 +17,7 @@ def get_plain_text(prop):
     for key in ("title", "rich_text"):
         items = prop.get(key)
         if items:
-            return items[0].get("plain_text", "")
+            return "".join(item.get("plain_text", "") for item in items)
     return ""
 
 
