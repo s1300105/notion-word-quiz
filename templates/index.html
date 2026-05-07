@@ -614,11 +614,33 @@
       renderQuestion();
     }
 
-    // ── Build question list ────────────────────────────────────
+    // ── Build question list (weighted by score category) ──────
     function buildQuestions() {
-      const shuffled = [...state.allWords].sort(() => Math.random() - 0.5);
-      const count = Math.min(state.totalCount, shuffled.length);
-      state.questions = shuffled.slice(0, count);
+      const yocheck   = state.allWords.filter(w => w.score < 5);
+      const mousukohi = state.allWords.filter(w => w.score >= 5 && w.score < 10);
+      const ok        = state.allWords.filter(w => w.score >= 10);
+
+      const target = Math.min(state.totalCount, state.allWords.length);
+      let yn = Math.round(target * 0.50);
+      let mn = Math.round(target * 0.35);
+      let on = target - yn - mn;
+
+      yn = Math.min(yn, yocheck.length);
+      mn = Math.min(mn, mousukohi.length);
+      on = Math.min(on, ok.length);
+
+      let rem = target - yn - mn - on;
+      const fill = (arr, used) => { const e = Math.min(rem, arr.length - used); rem -= e; return e; };
+      yn += fill(yocheck, yn);
+      mn += fill(mousukohi, mn);
+      on += fill(ok, on);
+
+      const pick = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+      state.questions = [
+        ...pick(yocheck, yn),
+        ...pick(mousukohi, mn),
+        ...pick(ok, on),
+      ].sort(() => Math.random() - 0.5);
     }
 
     // ── Render one question ────────────────────────────────────
@@ -679,6 +701,15 @@
 
       const isCorrect = state.currentChoices[index].isCorrect;
       if (isCorrect) state.score++;
+
+      const word = state.questions[state.currentIndex];
+      const newScore = Math.max(0, (word.score ?? 0) + (isCorrect ? 1 : -1));
+      word.score = newScore;
+      fetch('/api/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page_id: word.page_id, new_score: newScore }),
+      });
 
       document.getElementById('score-display').textContent = `スコア: ${state.score}`;
 

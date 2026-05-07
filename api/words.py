@@ -46,12 +46,15 @@ def fetch_words():
         pronunciation = get_plain_text(props.get("発音"))
         translation = get_plain_text(props.get("和訳"))
         memo = get_plain_text(props.get("メモ"))
+        score = (props.get("正解数") or {}).get("number") or 0
         if word and translation:
             words.append({
+                "page_id": page["id"],
                 "word": word,
                 "pronunciation": pronunciation,
                 "translation": translation,
                 "memo": memo,
+                "score": score,
             })
     return words, debug_props
 
