@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notion 単語クイズ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --primary-light: #eef2ff;
+      --success: #22c55e;
+      --success-light: #dcfce7;
+      --success-text: #166534;
+      --danger: #ef4444;
+      --danger-light: #fee2e2;
+      --danger-text: #991b1b;
+      --text: #1e293b;
+      --text-sub: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 4px 32px rgba(99,102,241,0.10), 0 1px 4px rgba(0,0,0,0.06);
+      --radius: 20px;
+      --radius-sm: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* ── Screens ── */
+    .screen { display: none; width: 100%; max-width: 580px; }
+    .screen.active { display: block; animation: fadeIn 0.25s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 40px 44px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    /* ── Start Screen ── */
+    .app-icon { font-size: 52px; margin-bottom: 12px; }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--text-sub);
+      margin-bottom: 36px;
+    }
+
+    .section-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+    }
+
+    .count-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 36px;
+    }
+
+    .count-btn {
+      padding: 12px 28px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: white;
+      font-family: inherit;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-sub);
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .count-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .count-btn.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 15px 32px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.18s, transform 0.1s;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-secondary {
+      background: white;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      padding: 13px 32px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      flex: 1;
+      transition: all 0.18s;
+    }
+    .btn-secondary:hover { background: var(--primary-light); }
+
+    /* ── Loading Screen ── */
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text { color: var(--text-sub); font-size: 15px; }
+
+    /* ── Error Screen ── */
+    .error-icon { font-size: 52px; margin-bottom: 16px; }
+    .error-card h2 { font-size: 22px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+    #error-message {
+      background: var(--danger-light);
+      color: var(--danger-text);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 28px;
+      text-align: left;
+    }
+
+    /* ── Quiz Header ── */
+    .quiz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 0 2px;
+    }
+    .q-counter {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-sub);
+    }
+    .score-display {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    /* ── Progress Bar ── */
+    .progress-wrap {
+      background: var(--border);
+      border-radius: 999px;
+      height: 7px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), #818cf8);
+      border-radius: 999px;
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 0%;
+    }
+
+    /* ── Word Card ── */
+    .word-card {
+      padding: 32px 36px;
+      margin-bottom: 18px;
+    }
+    #word-display {
+      font-size: 52px;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1.2;
+      word-break: break-word;
+      margin-bottom: 10px;
+    }
+    #pronunciation-display {
+      font-size: 18px;
+      color: var(--text-sub);
+      min-height: 24px;
+    }
+
+    /* ── Choices ── */
+    .choices-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .choice-btn {
+      background: white;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 14px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      line-height: 1.4;
+      word-break: break-all;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+      min-height: 60px;
+    }
+    .choice-btn:hover:not(:disabled) {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      transform: translateY(-1px);
+    }
+    .choice-btn:disabled { cursor: default; }
+
+    .choice-label {
+      background: var(--bg);
+      color: var(--text-sub);
+      font-weight: 900;
+      font-size: 13px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .choice-btn.correct {
+      background: var(--success-light);
+      border-color: var(--success);
+      color: var(--success-text);
+    }
+    .choice-btn.correct .choice-label {
+      background: var(--success);
+      color: white;
+    }
+    .choice-btn.wrong {
+      background: var(--danger-light);
+      border-color: var(--danger);
+      color: var(--danger-text);
+    }
+    .choice-btn.wrong .choice-label {
+      background: var(--danger);
+      color: white;
+    }
+
+    /* ── Feedback ── */
+    .feedback {
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .feedback.hidden { display: none; }
+    .feedback-correct {
+      background: var(--success-light);
+      color: var(--success-text);
+    }
+    .feedback-wrong {
+      background: var(--danger-light);
+      color: var(--danger-text);
+    }
+    .feedback-icon { font-size: 22px; flex-shrink: 0; }
+    .feedback-body { line-height: 1.5; }
+
+    #next-btn { margin-top: 4px; }
+
+    /* ── Result Screen ── */
+    .result-badge { font-size: 64px; margin-bottom: 8px; }
+    .result-card h2 {
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: 28px;
+    }
+    .result-numbers {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .result-score-num {
+      font-size: 72px;
+      font-weight: 900;
+      color: var(--primary);
+      line-height: 1;
+    }
+    .result-score-total {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-sub);
+    }
+    .result-pct {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-sub);
+      margin-bottom: 16px;
+    }
+    .result-comment {
+      font-size: 17px;
+      color: var(--text);
+      margin-bottom: 36px;
+      line-height: 1.6;
+    }
+    .result-buttons {
+      display: flex;
+      gap: 12px;
+    }
+    .result-buttons .btn-primary { flex: 1; }
+
+    /* ── Responsive ── */
+    @media (max-width: 520px) {
+      .card { padding: 28px 20px; }
+      .word-card { padding: 24px 20px; }
+      #word-display { font-size: 40px; }
+      .choices-grid { grid-template-columns: 1fr; }
+      .count-buttons { gap: 8px; }
+      .count-btn { padding: 10px 18px; font-size: 15px; }
+      .result-buttons { flex-direction: column-reverse; }
+      .result-score-num { font-size: 56px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Start Screen ── -->
+  <div id="screen-start" class="screen active">
+    <div class="card">
+      <div class="app-icon">📚</div>
+      <h1>単語クイズ</h1>
+      <p class="subtitle">Notion の単語帳から出題します</p>
+      <p class="section-label">問題数を選んでください</p>
+      <div class="count-buttons">
+        <button class="count-btn active" data-count="20">20問</button>
+        <button class="count-btn" data-count="50">50問</button>
+        <button class="count-btn" data-count="100">100問</button>
+      </div>
+      <button id="start-btn" class="btn-primary">スタート →</button>
+    </div>
+  </div>
+
+  <!-- ── Loading Screen ── -->
+  <div id="screen-loading" class="screen">
+    <div class="card">
+      <div class="spinner"></div>
+      <p class="loading-text">Notion からデータを読み込み中…</p>
+    </div>
+  </div>
+
+  <!-- ── Error Screen ── -->
+  <div id="screen-error" class="screen">
+    <div class="card error-card">
+      <div class="error-icon">⚠️</div>
+      <h2>エラーが発生しました</h2>
+      <p id="error-message"></p>
+      <button class="btn-primary" onclick="showScreen('start')">← 戻る</button>
+    </div>
+  </div>
+
+  <!-- ── Quiz Screen ── -->
+  <div id="screen-quiz" class="screen">
+    <div class="quiz-header">
+      <span class="q-counter" id="q-counter">Q.1 / 20</span>
+      <span class="score-display" id="score-display">スコア: 0</span>
+    </div>
+    <div class="progress-wrap">
+      <div id="progress-bar"></div>
+    </div>
+
+    <div class="card word-card">
+      <div id="word-display"></div>
+      <div id="pronunciation-display"></div>
+    </div>
+
+    <div id="choices-grid" class="choices-grid"></div>
+
+    <div id="feedback" class="feedback hidden">
+      <div class="feedback-icon" id="feedback-icon"></div>
+      <div class="feedback-body" id="feedback-body"></div>
+    </div>
+
+    <button id="next-btn" class="btn-primary hidden" onclick="nextQuestion()">次の問題へ →</button>
+  </div>
+
+  <!-- ── Result Screen ── -->
+  <div id="screen-result" class="screen">
+    <div class="card result-card">
+      <div class="result-badge" id="result-badge">🎉</div>
+      <h2>クイズ終了！</h2>
+      <div class="result-numbers">
+        <span class="result-score-num" id="final-score">0</span>
+        <span class="result-score-total">/ <span id="final-total">0</span> 問正解</span>
+      </div>
+      <div class="result-pct" id="result-pct">0%</div>
+      <div class="result-comment" id="result-comment"></div>
+      <div class="result-buttons">
+        <button class="btn-secondary" onclick="changeCount()">問題数を変更</button>
+        <button class="btn-primary" onclick="retryQuiz()">もう一度</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LABELS = ['A', 'B', 'C', 'D'];
+
+    const state = {
+      allWords: [],
+      questions: [],
+      currentIndex: 0,
+      score: 0,
+      totalCount: 20,
+      answered: false,
+      currentChoices: [],
+    };
+
+    // ── Screen management ──────────────────────────────────────
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(`screen-${name}`).classList.add('active');
+    }
+
+    // ── Count selector ────────────────────────────────────────
+    document.querySelectorAll('.count-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.totalCount = parseInt(btn.dataset.count);
+      });
+    });
+
+    // ── Start ─────────────────────────────────────────────────
+    document.getElementById('start-btn').addEventListener('click', startQuiz);
+
+    async function startQuiz() {
+      showScreen('loading');
+      try {
+        const resp = await fetch('/api/words');
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.error);
+        if (data.words.length < 4) {
+          throw new Error(`単語が ${data.words.length} 件しかありません。クイズには 4 件以上必要です。`);
+        }
+        state.allWords = data.words;
+        beginQuiz();
+      } catch (e) {
+        document.getElementById('error-message').textContent = e.message;
+        showScreen('error');
+      }
+    }
+
+    function beginQuiz() {
+      buildQuestions();
+      state.currentIndex = 0;
+      state.score = 0;
+      state.answered = false;
+      showScreen('quiz');
+      renderQuestion();
+    }
+
+    // ── Build question list ────────────────────────────────────
+    function buildQuestions() {
+      const shuffled = [...state.allWords].sort(() => Math.random() - 0.5);
+      const count = Math.min(state.totalCount, shuffled.length);
+      state.questions = shuffled.slice(0, count);
+    }
+
+    // ── Render one question ────────────────────────────────────
+    function renderQuestion() {
+      const q = state.questions[state.currentIndex];
+      const total = state.questions.length;
+      const num = state.currentIndex + 1;
+
+      document.getElementById('q-counter').textContent = `Q.${num} / ${total}`;
+      document.getElementById('score-display').textContent = `スコア: ${state.score}`;
+      document.getElementById('progress-bar').style.width = `${(state.currentIndex / total) * 100}%`;
+
+      document.getElementById('word-display').textContent = q.word;
+      document.getElementById('pronunciation-display').textContent =
+        q.pronunciation ? `[${q.pronunciation}]` : '';
+
+      state.currentChoices = makeChoices(q);
+      state.answered = false;
+
+      const grid = document.getElementById('choices-grid');
+      grid.innerHTML = '';
+      state.currentChoices.forEach((choice, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.innerHTML = `<span class="choice-label">${LABELS[i]}</span><span>${choice.text}</span>`;
+        btn.addEventListener('click', () => selectAnswer(i));
+        grid.appendChild(btn);
+      });
+
+      document.getElementById('feedback').className = 'feedback hidden';
+      const nextBtn = document.getElementById('next-btn');
+      nextBtn.classList.add('hidden');
+      nextBtn.textContent = '次の問題へ →';
+    }
+
+    // ── Build 4 choices (1 correct + 3 wrong) ─────────────────
+    function makeChoices(correctWord) {
+      const correct = correctWord.translation;
+      const pool = state.allWords
+        .filter(w => w.word !== correctWord.word && w.translation !== correct);
+
+      const wrong = pool
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3)
+        .map(w => w.translation);
+
+      // Pad if pool was too small
+      while (wrong.length < 3) wrong.push('—');
+
+      const all = [correct, ...wrong].sort(() => Math.random() - 0.5);
+      return all.map(text => ({ text, isCorrect: text === correct }));
+    }
+
+    // ── Handle answer selection ────────────────────────────────
+    function selectAnswer(index) {
+      if (state.answered) return;
+      state.answered = true;
+
+      const isCorrect = state.currentChoices[index].isCorrect;
+      if (isCorrect) state.score++;
+
+      document.getElementById('score-display').textContent = `スコア: ${state.score}`;
+
+      const btns = document.querySelectorAll('.choice-btn');
+      btns.forEach((btn, i) => {
+        btn.disabled = true;
+        if (state.currentChoices[i].isCorrect) {
+          btn.classList.add('correct');
+        } else if (i === index && !isCorrect) {
+          btn.classList.add('wrong');
+        }
+      });
+
+      const feedback = document.getElementById('feedback');
+      const icon = document.getElementById('feedback-icon');
+      const body = document.getElementById('feedback-body');
+
+      if (isCorrect) {
+        feedback.className = 'feedback feedback-correct';
+        icon.textContent = '✅';
+        body.textContent = '正解！';
+      } else {
+        const correctText = state.currentChoices.find(c => c.isCorrect).text;
+        feedback.className = 'feedback feedback-wrong';
+        icon.textContent = '❌';
+        body.innerHTML = `不正解。正解は「<strong>${correctText}</strong>」です。`;
+      }
+
+      const nextBtn = document.getElementById('next-btn');
+      nextBtn.classList.remove('hidden');
+      if (state.currentIndex === state.questions.length - 1) {
+        nextBtn.textContent = '結果を見る 🏁';
+      }
+    }
+
+    // ── Next question / show result ────────────────────────────
+    function nextQuestion() {
+      state.currentIndex++;
+      if (state.currentIndex >= state.questions.length) {
+        showResult();
+      } else {
+        renderQuestion();
+      }
+    }
+
+    // ── Result screen ──────────────────────────────────────────
+    function showResult() {
+      showScreen('result');
+      const score = state.score;
+      const total = state.questions.length;
+      const pct = Math.round((score / total) * 100);
+
+      document.getElementById('final-score').textContent = score;
+      document.getElementById('final-total').textContent = total;
+      document.getElementById('result-pct').textContent = `正解率 ${pct}%`;
+
+      let badge, comment;
+      if (pct === 100) {
+        badge = '🏆'; comment = '満点！完璧です！素晴らしい！';
+      } else if (pct >= 90) {
+        badge = '🎉'; comment = '素晴らしい成績です！あと少しで満点！';
+      } else if (pct >= 70) {
+        badge = '👍'; comment = 'よくできました！もう一息で上級者です。';
+      } else if (pct >= 50) {
+        badge = '💪'; comment = 'まずまずです。復習してもう一度挑戦しましょう！';
+      } else {
+        badge = '📖'; comment = 'まだまだこれから！コツコツ練習しましょう。';
+      }
+
+      document.getElementById('result-badge').textContent = badge;
+      document.getElementById('result-comment').textContent = comment;
+    }
+
+    function retryQuiz() {
+      beginQuiz();
+    }
+
+    function changeCount() {
+      showScreen('start');
+    }
+  </script>
+</body>
+</html>
