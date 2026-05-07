@@ -68,9 +68,12 @@ class handler(BaseHTTPRequestHandler):
             self._send(200, {"success": True, "words": words, "count": len(words)})
         except requests.HTTPError as e:
             code = e.response.status_code if e.response else "?"
-            self._send(500, {"success": False, "error": f"Notion API エラー (HTTP {code})"})
+            body = e.response.text[:200] if e.response else str(e)
+            self._send(500, {"success": False, "error": f"Notion API エラー (HTTP {code}): {body}"})
+        except requests.exceptions.RequestException as e:
+            self._send(500, {"success": False, "error": f"接続エラー: {str(e)}"})
         except Exception as e:
-            self._send(500, {"success": False, "error": str(e)})
+            self._send(500, {"success": False, "error": f"{type(e).__name__}: {str(e)}"})
 
     def _send(self, status, data):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
